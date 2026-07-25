@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, Alert, Linking, StyleSheet, TouchableOpacity } from 'react-native';
-import QRCodeSvg from 'react-native-qrcode-svg';
+import { View, Text, ScrollView, Alert, Linking, StyleSheet, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { api } from '../src/api/client';
-import { Screen, Card, Button, StatusBadge, LoadingView, TextField } from 'homehelp-mobile-ui';
+import { api } from '../../src/api/client';
+import { colors } from '../../src/constants/theme';
+import { Screen, Card, Button, StatusBadge, LoadingView } from 'homehelp-mobile-ui';
 import MapView, { Marker } from 'react-native-maps';
 
 function formatDate(dateStr?: string) {
@@ -86,7 +86,7 @@ export default function BookingDetailScreen() {
         </View>
 
         <Card>
-          <Text style={styles.cardTitle}>{booking.serviceType}</Text>
+          <Text style={[styles.cardTitle, { color: colors.text }]}>{booking.serviceType}</Text>
           <DetailRow label="Booking ID" value={booking.id.slice(0, 8)} />
           <DetailRow label="Address" value={booking.customerAddress || '—'} />
           <DetailRow label="Scheduled" value={formatDate(booking.scheduledAt)} />
@@ -99,7 +99,7 @@ export default function BookingDetailScreen() {
 
         {booking.worker && (
           <Card>
-            <Text style={styles.cardTitle}>Worker</Text>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>Worker</Text>
             <DetailRow label="Name" value={booking.worker.name} />
             {showWorkerLocation ? (
               <TouchableOpacity onPress={() => setShowMap(true)}>
@@ -111,7 +111,7 @@ export default function BookingDetailScreen() {
 
         {showMap && (showWorkerLocation) && (
           <Card>
-            <Text style={styles.cardTitle}>Worker Location</Text>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>Worker Location</Text>
             <MapView
               style={styles.map}
               initialRegion={{
@@ -131,8 +131,8 @@ export default function BookingDetailScreen() {
 
         {booking.status === 'assigned' && !showWorkerLocation && (
           <Card>
-            <Text style={styles.cardTitle}>Share OTP with Worker</Text>
-            <Text style={styles.otpHint}>Start OTP generated — share this code with your worker to begin the job.</Text>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>Share OTP with Worker</Text>
+            <Text style={[styles.otpHint, { color: colors.textMuted }]}>Start OTP generated — share this code with your worker to begin the job.</Text>
           </Card>
         )}
 
@@ -159,8 +159,8 @@ export default function BookingDetailScreen() {
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.detailRow}>
-      <Text style={styles.detailLabel}>{label}</Text>
-      <Text style={styles.detailValue}>{value}</Text>
+      <Text style={[styles.detailLabel, { color: colors.textMuted }]}>{label}</Text>
+      <Text style={[styles.detailValue, { color: colors.text }]}>{value}</Text>
     </View>
   );
 }
@@ -168,12 +168,12 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 48 },
   statusSection: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16, alignItems: 'center' },
-  cardTitle: { fontSize: 17, fontWeight: '600', color: '#1A2C2B', marginBottom: 12 },
-  detailRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#CDD3CE' },
-  detailLabel: { fontSize: 13, color: '#6B7280' },
-  detailValue: { fontSize: 13, fontWeight: '500', color: '#1A2C2B', maxWidth: '60%', textAlign: 'right' },
+  cardTitle: { fontSize: 17, fontWeight: '600', marginBottom: 12 },
+  detailRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: colors.divider },
+  detailLabel: { fontSize: 13 },
+  detailValue: { fontSize: 13, fontWeight: '500', maxWidth: '60%', textAlign: 'right' },
   map: { width: '100%', height: 180, borderRadius: 12 },
-  otpHint: { fontSize: 13, color: '#6B7280' },
+  otpHint: { fontSize: 13, marginTop: 8 },
   actionRow: { marginTop: 12 },
   cancelBtn: { marginTop: 12 },
 });

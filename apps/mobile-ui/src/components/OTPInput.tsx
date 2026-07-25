@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { View, TextInput, Text, StyleSheet, type ViewStyle } from 'react-native';
+import { useEffect } from 'react';
+import { View, Text, StyleSheet, type ViewStyle } from 'react-native';
 import { useTheme } from '../theme/theme';
 
 interface Props {

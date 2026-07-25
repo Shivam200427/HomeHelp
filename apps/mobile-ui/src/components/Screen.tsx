@@ -1,9 +1,9 @@
-import React from 'react';
-import { SafeAreaView, type ViewStyle } from 'react-native';
+import type { ReactNode } from 'react';
+import { SafeAreaView, StyleSheet, type ViewStyle } from 'react-native';
 import { useTheme } from '../theme/theme';
 
 interface Props {
-  children: React.ReactNode;
+  children: ReactNode;
   style?: ViewStyle;
 }
 

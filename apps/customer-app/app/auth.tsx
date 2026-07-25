@@ -50,29 +50,28 @@ export default function AuthScreen() {
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScreenScroll keyboardAware contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScreenScroll contentStyle={{ paddingBottom: 40 }}>
         <ScreenHeader title="HomeHelp" subtitle="Your home services, on demand" />
 
         <Card>
           <SegmentedControl
             options={[{ value: 'login', label: 'Login' }, { value: 'register', label: 'Sign Up' }]}
             value={mode}
-            onChange={setMode}
-            fullWidth
+            onChange={(v) => setMode(v as 'login' | 'register')}
           />
 
           {mode === 'register' && (
             <>
-              <TextField label="Full Name" placeholder="Your name" value={name} onChangeText={setName} autoCapitalize="words" />
-              <TextField label="Phone (optional)" placeholder="+91 9876543210" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+              <TextField label="Full Name" placeholder="Your name" value={name} onChangeText={setName} />
+              <TextField label="Phone (optional)" placeholder="+91 9876543210" value={phone} onChangeText={setPhone} />
             </>
           )}
 
-          <TextField label="Email" placeholder="you@example.com" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+          <TextField label="Email" placeholder="you@example.com" value={email} onChangeText={setEmail} />
 
           <TextField label="Password" placeholder="At least 6 characters" value={password} onChangeText={setPassword} secureTextEntry />
 
-          <Button title={mode === 'login' ? 'Login' : 'Create Account'} onPress={handleSubmit} loading={loading} fullWidth />
+          <Button title={mode === 'login' ? 'Login' : 'Create Account'} onPress={handleSubmit} loading={loading} />
         </Card>
 
         <View style={{ alignItems: 'center', marginTop: 16 }}>

@@ -53,7 +53,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  getMe: () => apiRequest<{ user: { id: string; name?: string; phoneNumber?: string } }>('/api/auth/me'),
+  getMe: () => apiRequest<{ user: { id: string; name?: string; phoneNumber?: string } }>('/api/auth/me').then((r) => r.user),
   createBooking: (data: Record<string, unknown>) =>
     apiRequest<{ booking: any }>('/api/bookings', { method: 'POST', body: JSON.stringify(data) }),
   getBookings: () =>
@@ -67,7 +67,7 @@ export const api = {
   markPaymentPaid: (paymentId: string) =>
     apiRequest<any>(`/api/payments/${paymentId}/mark-paid`, { method: 'POST' }),
   subscribePush: (subscription: object) =>
-    apiRequest<any>('/api/push/subscribe', { method: 'POST', body: subscription }),
+    apiRequest<any>('/api/push/subscribe', { method: 'POST', body: JSON.stringify(subscription) }),
   unsubscribePush: () =>
     apiRequest<any>('/api/push/unsubscribe', { method: 'POST' }),
 };

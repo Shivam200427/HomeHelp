@@ -1,7 +1,7 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '../src/context/AuthContext';
-import { colors, fonts } from '../src/constants/theme';
+import { colors } from '../src/constants/theme';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 
 function RootLayoutNav() {
@@ -18,9 +18,9 @@ function RootLayoutNav() {
   return (
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: colors.white },
+        headerStyle: { backgroundColor: colors.surface },
         headerTintColor: colors.text,
-        headerTitleStyle: { fontWeight: fonts.weightSemiBold, fontSize: fonts.sizeLg },
+        headerTitleStyle: { fontWeight: '600', fontSize: 18 },
         headerShadowVisible: false,
         contentStyle: { backgroundColor: colors.background },
       }}
@@ -30,8 +30,8 @@ function RootLayoutNav() {
       ) : (
         <>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-           <Stack.Screen name="active-job" options={{ title: 'Active Job' }} />
-           <Stack.Screen name="job/[id]" options={{ title: 'Job Details' }} />
+          <Stack.Screen name="active-job" options={{ title: 'Active Job' }} />
+          <Stack.Screen name="job/[id]" options={{ title: 'Job Details' }} />
         </>
       )}
     </Stack>

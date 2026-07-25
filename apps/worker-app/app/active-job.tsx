@@ -1,22 +1,22 @@
 import { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  TextInput,
-  ScrollView,
-  StyleSheet,
-  ActivityIndicator,
-  RefreshControl,
-  Alert,
-  Modal,
-} from 'react-native';
-import { colors, spacing, fonts, borderRadius, shadows } from '../src/constants/theme';
+import { View, Text, TouchableOpacity, TextInput, ScrollView, StyleSheet, ActivityIndicator, RefreshControl, Alert, Modal } from 'react-native';
+import { colors, spacing } from '../src/constants/theme';
 import { api } from '../src/api/client';
-import { Booking } from '../src/types';
 import { useAuth } from '../src/context/AuthContext';
 import { locationService } from '../src/lib/location';
-import { Screen, ScreenHeader, Card, Button, StatusBadge, LoadingView, EmptyState } from '../src/components/ui';
+import { Screen, ScreenHeader, Card, Button, StatusBadge, LoadingView, EmptyState } from 'homehelp-mobile-ui';
+
+interface Booking {
+  id: string;
+  serviceType: string;
+  status: string;
+  customerAddress?: string;
+  customerLat?: number;
+  customerLng?: number;
+  durationHours?: number;
+  totalAmount?: number;
+  user?: { name?: string; phoneNumber?: string };
+}
 
 type ActionType = 'start' | 'complete' | null;
 
@@ -47,10 +47,8 @@ export default function ActiveJobScreen() {
   async function loadActiveJobs() {
     try {
       const data = await api.getMyJobs();
-      const all = Array.isArray(data) ? data : data.bookings || [];
-      const active = all.filter(
-        (b: Booking) => b.status === 'assigned' || b.status === 'in_progress'
-      );
+      const all = Array.isArray(data) ? data : (data as any).bookings || [];
+      const active = all.filter((b: Booking) => b.status === 'assigned' || b.status === 'in_progress');
       setJobs(active);
     } catch {
       // ignore
@@ -82,10 +80,9 @@ export default function ActiveJobScreen() {
         if (worker && token) {
           await locationService.startTracking(selectedJob.id, worker.id);
         }
-      } else {
+      } else if (actionModal === 'complete') {
         await api.completeJob(selectedJob.id, otpInput, rating);
         Alert.alert('Completed', 'Job has been marked complete!');
-
         locationService.stopTracking();
       }
       setActionModal(null);
@@ -112,36 +109,32 @@ export default function ActiveJobScreen() {
         </View>
 
         {job.user ? (
-          <Text style={styles.customerName}>👤 {job.user.name || job.user.phoneNumber}</Text>
+          <Text style={styles.customerName}>{'\u{1F464}'} {job.user.name || job.user.phoneNumber}</Text>
         ) : null}
         {job.customerAddress ? (
-          <Text style={styles.address}>📍 {job.customerAddress}</Text>
+          <Text style={styles.address}>{'\u{1F4CD}'} {job.customerAddress}</Text>
         ) : null}
 
         <View style={styles.detailsRow}>
           {job.durationHours ? (
-            <Text style={styles.detail}>⏱ {job.durationHours}h</Text>
+            <Text style={styles.detail}>{'\u23F1'} {job.durationHours}h</Text>
           ) : null}
           {job.totalAmount ? (
-            <Text style={styles.detail}>💰 ₹{job.totalAmount}</Text>
+            <Text style={styles.detail}>{'\u{1F4B0}'} {'\u20B9'}{job.totalAmount}</Text>
           ) : null}
         </View>
 
         <View style={styles.actions}>
-          {job.status === 'assigned' && (
+          {job.status === 'assigned' ? (
             <Button title="Start Job" onPress={() => openActionModal(job, 'start')} />
-          )}
-          {job.status === 'in_progress' && (
-            <Button
-              title="Complete Job"
-              variant="primary"
-              onPress={() => openActionModal(job, 'complete')}
-            />
-          )}
+          ) : null}
+          {job.status === 'in_progress' ? (
+            <Button title="Complete Job" onPress={() => openActionModal(job, 'complete')} />
+          ) : null}
         </View>
 
         <TouchableOpacity style={styles.emergencyBtn}>
-          <Text style={styles.emergencyText}>🚨 Emergency Contact</Text>
+          <Text style={styles.emergencyText}>{'\u{1F6A8}'} Emergency Contact</Text>
         </TouchableOpacity>
       </Card>
     );
@@ -163,11 +156,7 @@ export default function ActiveJobScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
         {jobs.length === 0 ? (
-          <EmptyState
-            icon="🔍"
-            title="No active jobs"
-            message="Accept a job from the Jobs tab to get started"
-          />
+          <EmptyState icon="\u{1F50D}" title="No active jobs" message="Accept a job from the Jobs tab to get started" />
         ) : (
           jobs.map(renderJob)
         )}
@@ -195,24 +184,19 @@ export default function ActiveJobScreen() {
               onChangeText={setOtpInput}
             />
 
-            {actionModal === 'complete' && (
+            {actionModal === 'complete' ? (
               <View style={styles.ratingRow}>
                 <Text style={styles.ratingLabel}>Rating:</Text>
                 {[1, 2, 3, 4, 5].map((star) => (
                   <TouchableOpacity key={star} onPress={() => setRating(star)}>
-                    <Text style={[styles.star, star <= rating && styles.starActive]}>
-                      ★
-                    </Text>
+                    <Text style={[styles.star, star <= rating && styles.starActive]}>★</Text>
                   </TouchableOpacity>
                 ))}
               </View>
-            )}
+            ) : null}
 
             <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={styles.cancelBtn}
-                onPress={() => setActionModal(null)}
-              >
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => setActionModal(null)}>
                 <Text style={styles.cancelText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -237,149 +221,63 @@ export default function ActiveJobScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: {
-    padding: spacing.md,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xxl,
-  },
-  emptyContainer: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: spacing.lg,
-  },
-  card: {
-    marginBottom: spacing.md,
-  },
-  cardTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  serviceType: {
-    fontSize: fonts.sizeLg,
-    fontWeight: fonts.weightBold,
-    color: colors.text,
-    flex: 1,
-  },
-  customerName: {
-    fontSize: fonts.sizeSm,
-    color: colors.text,
-    marginBottom: 2,
-  },
-  address: {
-    fontSize: fonts.sizeSm,
-    color: colors.textMuted,
-    marginBottom: spacing.sm,
-  },
-  detailsRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
+  content: { padding: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.xxl },
+  emptyContainer: { flexGrow: 1, justifyContent: 'center', padding: spacing.lg },
+  card: { marginBottom: spacing.md },
+  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
+  serviceType: { fontSize: 18, fontWeight: '600', flex: 1, color: colors.text },
+  customerName: { fontSize: 14, marginBottom: 2, color: colors.text },
+  address: { fontSize: 14, marginBottom: spacing.sm, color: colors.textMuted },
+  detailsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   detail: {
-    fontSize: fonts.sizeSm,
-    color: colors.text,
-    backgroundColor: colors.background,
+    fontSize: 14,
     paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.sm,
-  },
-  actions: {
-    marginTop: spacing.xs,
-  },
-  emergencyBtn: {
-    marginTop: spacing.sm,
-    paddingVertical: 8,
-    alignItems: 'center',
-  },
-  emergencyText: {
-    color: colors.error,
-    fontSize: fonts.sizeSm,
-    fontWeight: fonts.weightSemiBold,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: colors.overlay,
-    justifyContent: 'center',
-    padding: spacing.lg,
-  },
-  modalContent: {
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    ...shadows.card,
-  },
-  modalTitle: {
-    fontSize: fonts.sizeXl,
-    fontWeight: fonts.weightBold,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: colors.surface,
     color: colors.text,
-    marginBottom: spacing.xs,
   },
-  modalSub: {
-    fontSize: fonts.sizeSm,
-    color: colors.textMuted,
-    marginBottom: spacing.lg,
-  },
+  actions: { marginTop: 4 },
+  emergencyBtn: { marginTop: spacing.sm, paddingVertical: spacing.sm, alignItems: 'center' },
+  emergencyText: { fontSize: 14, fontWeight: '600', color: colors.error },
+  modalOverlay: { flex: 1, justifyContent: 'center', padding: spacing.lg, backgroundColor: colors.overlay },
+  modalContent: { borderRadius: 16, padding: spacing.lg, backgroundColor: colors.surface },
+  modalTitle: { fontSize: 22, fontWeight: '600', marginBottom: 4, color: colors.text },
+  modalSub: { fontSize: 14, marginBottom: spacing.lg, color: colors.textMuted },
   otpInput: {
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.md,
+    borderRadius: 12,
     paddingHorizontal: spacing.md,
     paddingVertical: 14,
-    fontSize: fonts.sizeXxl,
-    color: colors.text,
+    fontSize: 28,
     textAlign: 'center',
     letterSpacing: 8,
     borderWidth: 1.5,
     borderColor: colors.border,
+    color: colors.text,
+    backgroundColor: colors.background,
     marginBottom: spacing.md,
   },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-    gap: 4,
-  },
-  ratingLabel: {
-    fontSize: fonts.sizeMd,
-    color: colors.text,
-    fontWeight: fonts.weightSemiBold,
-    marginRight: spacing.sm,
-  },
-  star: {
-    fontSize: 28,
-    color: colors.border,
-  },
-  starActive: {
-    color: colors.warning,
-  },
-  modalActions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
+  ratingRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.lg, gap: 4 },
+  ratingLabel: { fontSize: 16, fontWeight: '600', marginRight: spacing.sm, color: colors.text },
+  star: { fontSize: 28, color: colors.textMuted },
+  starActive: { color: colors.warning },
+  modalActions: { flexDirection: 'row', gap: spacing.sm },
   cancelBtn: {
     flex: 1,
     paddingVertical: 14,
     alignItems: 'center',
-    borderRadius: borderRadius.md,
+    borderRadius: 12,
     borderWidth: 1.5,
     borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
-  cancelText: {
-    color: colors.textMuted,
-    fontSize: fonts.sizeMd,
-    fontWeight: fonts.weightSemiBold,
-  },
+  cancelText: { fontSize: 16, fontWeight: '600', color: colors.textMuted },
   confirmBtn: {
     flex: 1,
-    backgroundColor: colors.primary,
     paddingVertical: 14,
     alignItems: 'center',
-    borderRadius: borderRadius.md,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
   },
-  confirmText: {
-    color: colors.white,
-    fontSize: fonts.sizeMd,
-    fontWeight: fonts.weightBold,
-  },
+  confirmText: { fontSize: 16, fontWeight: '600', color: colors.white },
 });

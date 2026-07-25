@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAuth } from '../src/context/AuthContext';
-import { ScreenScroll, ScreenHeader, Card, Button, TextField, SegmentedControl, Chip } from 'homehelp-mobile-ui';
-import { api } from '../src/api/client';
+import { useAuth } from '../../src/context/AuthContext';
+import { colors, borderRadius } from '../../src/constants/theme';
+import { api } from '../../src/api/client';
+import { ScreenScroll, ScreenHeader, Card, Button, TextField, Chip } from 'homehelp-mobile-ui';
 
 const SERVICE_OPTIONS: Record<string, { label: string; description: string; options: string[] }> = {
   home_help: {
@@ -55,7 +56,7 @@ export default function HomeScreen() {
       <ScreenHeader title={`Hi, ${user?.name?.split(' ')[0] || 'there'}`} subtitle="What do you need help with today?" />
 
       <Card>
-        <View style={styles.sectionTitle}>Choose a Service</View>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Choose a Service</Text>
         <View style={styles.modeGrid}>
           {(['home_help', 'driver'] as const).map((m) => {
             const active = mode === m;
@@ -63,13 +64,13 @@ export default function HomeScreen() {
               <TouchableOpacity key={m} style={[styles.modeCard, active && styles.modeCardActive]} onPress={() => { setMode(m); setServiceType(SERVICE_OPTIONS[m].options[0]); }}>
                 <Text style={styles.modeIcon}>{m === 'home_help' ? '🏠' : '🚗'}</Text>
                 <Text style={[styles.modeLabel, active && styles.modeLabelActive]}>{SERVICE_OPTIONS[m].label}</Text>
-                <Text style={styles.modeDesc}>{SERVICE_OPTIONS[m].description}</Text>
+                <Text style={[styles.modeDesc, { color: colors.textMuted }]}>{SERVICE_OPTIONS[m].description}</Text>
               </TouchableOpacity>
             );
           })}
         </View>
 
-        <View style={styles.sectionTitle}>Service Type</View>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Service Type</Text>
         <View style={styles.optionsGrid}>
           {SERVICE_OPTIONS[mode].options.map((opt) => (
             <Chip key={opt} label={opt} active={serviceType === opt} onPress={() => setServiceType(opt)} />
@@ -78,14 +79,14 @@ export default function HomeScreen() {
 
         <TextField label="Service Address" placeholder="Enter full address, including landmark" value={address} onChangeText={setAddress} multiline />
 
-        <View style={styles.sectionTitle}>Duration (hours)</View>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Duration (hours)</Text>
         <View style={styles.optionsGrid}>
           {[1, 2, 3, 4, 6, 8].map((h) => (
             <Chip key={h} label={`${h}h`} active={duration === h} onPress={() => setDuration(h)} />
           ))}
         </View>
 
-        <View style={styles.sectionTitle}>Schedule</View>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Schedule</Text>
         <View style={styles.scheduleRow}>
           <Chip label="Immediate" active={scheduleNow} onPress={() => setScheduleNow(true)} />
           <Chip label="Scheduled" active={!scheduleNow} onPress={() => setScheduleNow(false)} />
@@ -98,14 +99,14 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  sectionTitle: { fontSize: 14, fontWeight: '600', color: '#1A2C2B', marginBottom: 12, marginTop: 16, textTransform: 'uppercase', letterSpacing: 0.5 },
+  sectionTitle: { fontSize: 14, fontWeight: '600', color: colors.text, marginBottom: 12, marginTop: 16, textTransform: 'uppercase', letterSpacing: 0.5 },
   modeGrid: { flexDirection: 'row', gap: 12, marginBottom: 16 },
-  modeCard: { flex: 1, backgroundColor: '#FFFFFF', padding: 16, borderRadius: 14, alignItems: 'center', borderWidth: 2, borderColor: 'transparent' },
-  modeCardActive: { borderColor: '#0EAA6F' },
+  modeCard: { flex: 1, backgroundColor: colors.surface, padding: 16, borderRadius: borderRadius.md, alignItems: 'center', borderWidth: 2, borderColor: 'transparent' },
+  modeCardActive: { borderColor: colors.primary },
   modeIcon: { fontSize: 26, marginBottom: 8 },
-  modeLabel: { fontSize: 14, fontWeight: '600', color: '#6B7280', textAlign: 'center' },
-  modeLabelActive: { color: '#0EAA6F' },
-  modeDesc: { fontSize: 11, color: '#6B7280', textAlign: 'center', marginTop: 4, lineHeight: 14 },
+  modeLabel: { fontSize: 14, fontWeight: '600', color: colors.textMuted, textAlign: 'center' },
+  modeLabelActive: { color: colors.primary },
+  modeDesc: { fontSize: 11, color: colors.textMuted, textAlign: 'center', marginTop: 4, lineHeight: 14 },
   optionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
   scheduleRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
 });

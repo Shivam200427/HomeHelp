@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { Text, StyleSheet, Animated } from 'react-native';
 import { useTheme } from '../theme/theme';
 
 type ToastType = 'success' | 'error' | 'warning' | 'info';
@@ -27,9 +27,9 @@ export function Toast({ visible, message, type = 'info', onClose }: Props) {
         });
       }, 3000);
       return () => clearTimeout(t);
-    } else {
-      Animated.timing(slideAnim, { toValue: -100, duration: 250, useNativeDriver: true }).start(() => setShow(false));
     }
+    Animated.timing(slideAnim, { toValue: -100, duration: 250, useNativeDriver: true }).start(() => setShow(false));
+    return undefined;
   }, [visible]);
 
   if (!show) return null;

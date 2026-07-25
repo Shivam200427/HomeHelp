@@ -27,7 +27,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (storedToken) {
         setToken(storedToken);
         const userData = await api.getMe();
-        setWorker(userData.user);
+        setWorker(userData);
       }
     } catch (err: unknown) {
       const status =

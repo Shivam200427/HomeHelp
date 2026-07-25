@@ -14,7 +14,15 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
+    "paths": {
+      "react-native": ["./node_modules/react-native"],
+      "react-native-svg": ["./node_modules/react-native-svg"],
+      "@react-native-async-storage/async-storage": ["./node_modules/@react-native-async-storage/async-storage"],
+      "expo-haptics": ["./node_modules/expo-haptics"]
+    }
   },
   "include": ["src", "app"]
 }

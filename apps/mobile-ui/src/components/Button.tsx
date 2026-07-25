@@ -1,5 +1,4 @@
-import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, type ViewStyle, type TextStyle } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, type ViewStyle } from 'react-native';
 import { useTheme } from '../theme/theme';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'outline' | 'danger';

@@ -1,11 +1,21 @@
 import * as Haptics from 'expo-haptics';
 
+type ImpactStyle = 'light' | 'medium' | 'heavy';
+
 export function useHaptics() {
-  function impact(style: 'light' | 'medium' | 'heavy' = 'light') {
-    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle[style.charAt(0).toUpperCase() + style.slice(1)]); } catch {}
+  function impact(style: ImpactStyle = 'light') {
+    const key = style.charAt(0).toUpperCase() + style.slice(1);
+    const value = (Haptics.ImpactFeedbackStyle as Record<string, Haptics.ImpactFeedbackStyle>)[key];
+    if (value != null) {
+      try { Haptics.impactAsync(value); } catch {}
+    }
   }
   function notification(type: 'success' | 'warning' | 'error' = 'success') {
-    try { Haptics.notificationAsync(Haptics.NotificationFeedbackType[type.charAt(0).toUpperCase() + type.slice(1)]); } catch {}
+    const key = type.charAt(0).toUpperCase() + type.slice(1);
+    const value = (Haptics.NotificationFeedbackType as Record<string, Haptics.NotificationFeedbackType>)[key];
+    if (value != null) {
+      try { Haptics.notificationAsync(value); } catch {}
+    }
   }
   return { impact, notification };
 }

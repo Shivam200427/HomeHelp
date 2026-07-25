@@ -1,7 +1,7 @@
 import { View, Text, Alert, StyleSheet } from 'react-native';
-import { colors, spacing, fonts, borderRadius, shadows } from '../../src/constants/theme';
 import { useAuth } from '../../src/context/AuthContext';
-import { ScreenScroll, ScreenHeader, Card, Button } from '../../src/components/ui';
+import { colors, spacing } from '../../src/constants/theme';
+import { ScreenScroll, ScreenHeader, Card, Button } from 'homehelp-mobile-ui';
 
 export default function ProfileScreen() {
   const { worker, logout } = useAuth();
@@ -68,35 +68,43 @@ export default function ProfileScreen() {
 
         <View style={styles.verifRow}>
           <Text style={styles.verifLabel}>Aadhaar</Text>
-          {worker.aadhaarVerified ? (
-            <View style={[styles.verifBadge, { backgroundColor: colors.success + '1A', borderColor: colors.success + '40' }]}>
-              <Text style={[styles.verifBadgeText, { color: colors.success }]}>Verified</Text>
-            </View>
-          ) : (
-            <View style={[styles.verifBadge, { backgroundColor: colors.warning + '1A', borderColor: colors.warning + '40' }]}>
-              <Text style={[styles.verifBadgeText, { color: colors.warning }]}>Pending</Text>
-            </View>
-          )}
+          <View
+            style={[
+              styles.verifBadge,
+              {
+                backgroundColor: (worker.aadhaarVerified ? colors.success : colors.warning) + '1A',
+                borderColor: (worker.aadhaarVerified ? colors.success : colors.warning) + '40',
+              },
+            ]}
+          >
+            <Text style={[styles.verifBadgeText, { color: worker.aadhaarVerified ? colors.success : colors.warning }]}>
+              {worker.aadhaarVerified ? 'Verified' : 'Pending'}
+            </Text>
+          </View>
         </View>
 
         <View style={[styles.verifRow, { marginTop: spacing.sm }]}>
           <Text style={styles.verifLabel}>License</Text>
-          {worker.licenseVerified ? (
-            <View style={[styles.verifBadge, { backgroundColor: colors.success + '1A', borderColor: colors.success + '40' }]}>
-              <Text style={[styles.verifBadgeText, { color: colors.success }]}>Verified</Text>
-            </View>
-          ) : (
-            <View style={[styles.verifBadge, { backgroundColor: colors.warning + '1A', borderColor: colors.warning + '40' }]}>
-              <Text style={[styles.verifBadgeText, { color: colors.warning }]}>Pending</Text>
-            </View>
-          )}
+          <View
+            style={[
+              styles.verifBadge,
+              {
+                backgroundColor: (worker.licenseVerified ? colors.success : colors.warning) + '1A',
+                borderColor: (worker.licenseVerified ? colors.success : colors.warning) + '40',
+              },
+            ]}
+          >
+            <Text style={[styles.verifBadgeText, { color: worker.licenseVerified ? colors.success : colors.warning }]}>
+              {worker.licenseVerified ? 'Verified' : 'Pending'}
+            </Text>
+          </View>
         </View>
       </Card>
 
       <Card style={styles.card}>
         <Text style={styles.cardTitle}>Stats</Text>
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>{worker.totalJobs}</Text>
+          <Text style={[styles.statValue, { color: colors.primary }]}>{worker.totalJobs}</Text>
           <Text style={styles.statLabel}>Total Jobs Completed</Text>
         </View>
         <View style={[styles.statItem, { marginTop: spacing.md }]}>
@@ -113,106 +121,46 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  avatarSection: {
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-  },
+  avatarSection: { alignItems: 'center', marginBottom: spacing.xl },
   avatar: {
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.md,
-    ...shadows.button,
+    backgroundColor: colors.primary,
   },
-  avatarText: {
-    fontSize: 34,
-    fontWeight: fonts.weightBold,
-    color: colors.white,
-  },
-  userName: {
-    fontSize: fonts.sizeXxl,
-    fontWeight: fonts.weightBold,
-    color: colors.text,
-  },
-  userSubtext: {
-    fontSize: fonts.sizeMd,
-    color: colors.textMuted,
-    marginTop: 4,
-  },
+  avatarText: { fontSize: 34, fontWeight: '700', color: colors.white },
+  userName: { fontSize: 24, fontWeight: '700', color: colors.text },
+  userSubtext: { fontSize: 16, marginTop: 4, color: colors.textMuted },
   typeChip: {
     marginTop: spacing.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.background,
+    borderRadius: 999,
     borderWidth: 1.5,
     borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
-  typeChipText: {
-    fontSize: fonts.sizeSm,
-    fontWeight: fonts.weightSemiBold,
-    color: colors.primary,
-  },
+  typeChipText: { fontSize: 14, fontWeight: '600', color: colors.primary },
   card: { marginBottom: spacing.md },
-  cardTitle: {
-    fontSize: fonts.sizeLg,
-    fontWeight: fonts.weightBold,
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
-  starsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  star: {
-    fontSize: 24,
-    color: colors.border,
-    marginRight: 2,
-  },
-  starActive: {
-    color: colors.warning,
-  },
-  ratingText: {
-    fontSize: fonts.sizeSm,
-    color: colors.textMuted,
-    marginLeft: spacing.sm,
-  },
-  verifRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  verifLabel: {
-    fontSize: fonts.sizeSm,
-    color: colors.text,
-  },
+  cardTitle: { fontSize: 18, fontWeight: '600', marginBottom: spacing.md, color: colors.text },
+  starsRow: { flexDirection: 'row', alignItems: 'center' },
+  star: { fontSize: 24, marginRight: 2, color: colors.textMuted },
+  starActive: { color: colors.warning },
+  ratingText: { fontSize: 14, marginLeft: spacing.sm, color: colors.textMuted },
+  verifRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  verifLabel: { fontSize: 14, color: colors.text },
   verifBadge: {
-    paddingHorizontal: spacing.sm + 2,
+    paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: borderRadius.full,
+    borderRadius: 999,
     borderWidth: 1,
   },
-  verifBadgeText: {
-    fontSize: fonts.sizeXs,
-    fontWeight: fonts.weightSemiBold,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: fonts.sizeXxl,
-    fontWeight: fonts.weightBold,
-    color: colors.primary,
-  },
-  statLabel: {
-    fontSize: fonts.sizeSm,
-    color: colors.textMuted,
-    marginTop: 2,
-  },
+  verifBadgeText: { fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.4 },
+  statItem: { alignItems: 'center' },
+  statValue: { fontSize: 24, fontWeight: '700' },
+  statLabel: { fontSize: 14, marginTop: 2, color: colors.textMuted },
   logout: { marginTop: spacing.md },
 });

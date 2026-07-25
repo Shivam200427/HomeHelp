@@ -48,8 +48,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     }),
-  getMe: () => apiRequest<{ user: { id: string; name?: string; phoneNumber?: string; worker?: any } }>('/api/auth/me'),
+  getMe: () => apiRequest<{ user: { id: string; name?: string; phoneNumber?: string; worker?: any } }>('/api/auth/me').then((r) => r.user),
   getMyJobs: () => apiRequest<{ bookings: any[] }>('/api/bookings/worker'),
+  getJob: (id: string) => apiRequest<{ booking: any }>(`/api/bookings/${id}`),
+  acceptJob: (id: string) => apiRequest<any>(`/api/bookings/${id}/accept`, { method: 'PATCH' }),
   getEarnings: () => apiRequest<{ payouts: any[] }>('/api/payouts/me'),
   toggleAvailability: (isAvailable: boolean) =>
     apiRequest<any>('/api/workers/me/availability', { method: 'PATCH', body: JSON.stringify({ isAvailable }) }),

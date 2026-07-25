@@ -1,4 +1,4 @@
-import React from 'react';
+import type { ReactNode } from 'react';
 import { View, Text, Modal, TouchableOpacity, StyleSheet, type ViewStyle } from 'react-native';
 import { useTheme } from '../theme/theme';
 
@@ -6,7 +6,7 @@ interface Props {
   visible: boolean;
   onClose: () => void;
   title?: string;
-  children: React.ReactNode;
+  children: ReactNode;
   style?: ViewStyle;
 }
 

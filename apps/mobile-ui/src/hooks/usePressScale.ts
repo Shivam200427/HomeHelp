@@ -1,9 +1,7 @@
 import { useRef } from 'react';
 import { Animated } from 'react-native';
-import { useTheme } from '../theme/theme';
 
 export function usePressScale() {
-  const { colors } = useTheme();
   const scale = useRef(new Animated.Value(1)).current;
 
   function onPressIn() {

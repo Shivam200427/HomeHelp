@@ -1,11 +1,11 @@
-import React from 'react';
-import { View, type ViewStyle, type StyleProp } from 'react-native';
+import type { ReactNode } from 'react';
+import { View, StyleSheet, type ViewStyle, type StyleProp } from 'react-native';
 import { useTheme } from '../theme/theme';
 
 type Variant = 'default' | 'elevated' | 'ghost';
 
 interface Props {
-  children: React.ReactNode;
+  children: ReactNode;
   variant?: Variant;
   style?: StyleProp<ViewStyle>;
 }

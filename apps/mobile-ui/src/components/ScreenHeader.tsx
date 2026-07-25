@@ -1,11 +1,11 @@
-import React from 'react';
-import { View, Text, type ViewStyle, type TextStyle } from 'react-native';
+import type { ReactNode } from 'react';
+import { View, Text, StyleSheet, type ViewStyle } from 'react-native';
 import { useTheme } from '../theme/theme';
 
 interface Props {
   title: string;
   subtitle?: string;
-  right?: React.ReactNode;
+  right?: ReactNode;
   style?: ViewStyle;
 }
 

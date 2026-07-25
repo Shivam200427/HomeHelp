@@ -94,4 +94,20 @@ export const darkColors = {
   shadowAccent: 'rgba(52,211,155,0.22)',
 } as const;
 
-export type Colors = typeof lightColors;
+export type Colors = {
+  brand: {
+    primary: { base: string; hover: string; active: string; subtle: string; glow: string };
+    warm: { base: string; hover: string; active: string; subtle: string; glow: string };
+  };
+  surface: { background: string; primary: string; secondary: string; tertiary: string; inverse: string };
+  border: { base: string; hover: string; focus: string };
+  text: { primary: string; secondary: string; tertiary: string; onAccent: string; onInverse: string };
+  status: { success: string; error: string; warning: string; info: string };
+  booking: { pending: string; assigned: string; in_progress: string; completed: string; cancelled: string };
+  skeleton: { base: string; highlight: string };
+  overlay: string;
+  white: string;
+  black: string;
+  shadow: string;
+  shadowAccent: string;
+};

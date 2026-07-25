@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Alert, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { useAuth } from '../src/context/AuthContext';
-import { ScreenScroll, ScreenHeader, Card, Button, TextField, SegmentedControl } from 'homehelp-mobile-ui';
+import { ScreenScroll, ScreenHeader, Card, Button, TextField } from 'homehelp-mobile-ui';
 
 export default function AuthScreen() {
   const { login } = useAuth();
@@ -35,12 +35,12 @@ export default function AuthScreen() {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScreenScroll keyboardAware contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScreenScroll contentStyle={{ paddingBottom: 40 }}>
         <ScreenHeader title="HomeHelp" subtitle="Worker Portal — Sign in" />
         <Card>
-          <TextField label="Email" placeholder="you@example.com" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+          <TextField label="Email" placeholder="you@example.com" value={email} onChangeText={setEmail} />
           <TextField label="Password" placeholder="At least 6 characters" value={password} onChangeText={setPassword} secureTextEntry />
-          <Button title="Sign In" onPress={handleSubmit} loading={loading} fullWidth />
+          <Button title="Sign In" onPress={handleSubmit} loading={loading} />
         </Card>
       </ScreenScroll>
     </KeyboardAvoidingView>

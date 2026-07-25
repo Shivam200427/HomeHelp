@@ -1,6 +1,4 @@
-import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, type ViewStyle } from 'react-native';
-import { useTheme } from '../theme/theme';
 
 interface Props {
   label: string;
@@ -10,8 +8,6 @@ interface Props {
 }
 
 export function Chip({ label, active, onPress, style }: Props) {
-  const { colors } = useTheme();
-
   return (
     <TouchableOpacity
       onPress={onPress}
