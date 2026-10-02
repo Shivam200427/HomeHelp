@@ -1,10 +1,14 @@
+import { API_URL } from '@/lib/config';
 'use client';
 
 import { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { getToken } from '@/lib/auth';
+// @ts-expect-error cashfree-js lacks types
+import { load } from '@cashfreepayments/cashfree-js';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://homehelp-clbc.onrender.com';
+
+const CASHFREE_ENV = process.env.NEXT_PUBLIC_CASHFREE_ENVIRONMENT === 'PRODUCTION' ? 'production' : 'sandbox';
 
 type UpiInfo = { pa: string; pn: string; am: number; cu: string; tn: string; link: string } | null;
 
@@ -14,6 +18,8 @@ export function UpiPayment({ bookingId, compact = false }: { bookingId: string; 
   const [amount, setAmount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [paymentSessionId, setPaymentSessionId] = useState<string | null>(null);
+  const [paymentId, setPaymentId] = useState<string | null>(null);
 
   useEffect(() => {
     const token = getToken();
@@ -36,6 +42,8 @@ export function UpiPayment({ bookingId, compact = false }: { bookingId: string; 
           setStatus(data.payment?.status || '');
           setAmount(Number(data.payment?.amount) || 0);
           setUpi(data.upi || null);
+          setPaymentSessionId(data.paymentSessionId || null);
+          setPaymentId(data.payment?.id || null);
         }
       } catch (e: unknown) {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load payment');
@@ -45,6 +53,38 @@ export function UpiPayment({ bookingId, compact = false }: { bookingId: string; 
     })();
     return () => { cancelled = true; };
   }, [bookingId]);
+
+  const handleCashfreePayment = async () => {
+    if (!paymentSessionId) return;
+    try {
+      const cashfree = await load({ mode: CASHFREE_ENV });
+      cashfree.checkout({ paymentSessionId });
+    } catch (e: any) {
+      console.error('Cashfree checkout failed', e);
+      setError('Failed to initialize payment gateway.');
+    }
+  };
+
+  const handleRefreshStatus = async () => {
+    const token = getToken();
+    if (!token || !paymentId) return;
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_URL}/api/payments/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ paymentId }),
+      });
+      const data = await res.json();
+      if (res.ok && data.payment) {
+        setStatus(data.payment.status);
+      }
+    } catch (e) {
+      console.error('Failed to verify payment', e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) {
     return <div className="h-24 bg-surface-secondary rounded-xl skeleton" />;
@@ -58,9 +98,9 @@ export function UpiPayment({ bookingId, compact = false }: { bookingId: string; 
         <svg className="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
         </svg>
-        <div>
-          <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">Payment received</p>
-          <p className="text-xs text-emerald-700 dark:text-emerald-400">₹{amount} &middot; confirmed by admin</p>
+        <div className="flex-1">
+          <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">Payment successful</p>
+          <p className="text-xs text-emerald-700 dark:text-emerald-400">₹{amount} confirmed</p>
         </div>
       </div>
     );
@@ -70,11 +110,37 @@ export function UpiPayment({ bookingId, compact = false }: { bookingId: string; 
     return <p className="mt-4 text-sm text-red-600 dark:text-red-400">{error}</p>;
   }
 
+  if (paymentSessionId) {
+    return (
+      <div className="mt-4 bg-surface-secondary rounded-xl p-4">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-sm font-medium text-foreground">Secure Payment via Cashfree</p>
+          <span className="text-[10px] uppercase tracking-wider text-foreground-tertiary card-base rounded-full px-2 py-0.5">Online</span>
+        </div>
+        <p className="text-sm text-foreground-secondary mb-4">Amount due: <strong>₹{amount}</strong></p>
+        <div className="flex gap-2">
+          <button
+            onClick={handleCashfreePayment}
+            className="btn-base btn-primary flex-1 text-sm font-semibold py-2.5 rounded-xl"
+          >
+            Pay Now
+          </button>
+          <button
+            onClick={handleRefreshStatus}
+            className="btn-base bg-surface border border-border px-4 py-2.5 rounded-xl text-sm font-medium text-foreground-secondary"
+          >
+            Refresh Status
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (!upi) {
     return (
       <div className="mt-4 bg-surface-secondary rounded-xl p-4">
         <p className="text-sm font-medium text-foreground">Amount due: ₹{amount}</p>
-        <p className="text-xs text-foreground-tertiary mt-1">UPI payment is being set up. Our team will share payment details shortly.</p>
+        <p className="text-xs text-foreground-tertiary mt-1">Payment is being set up. Our team will share payment details shortly.</p>
       </div>
     );
   }

@@ -7,6 +7,9 @@ export default defineConfig({
     env: {
       JWT_SECRET: 'test-secret',
       NODE_ENV: 'test',
+      CASHFREE_APP_ID: 'test_app_id',
+      CASHFREE_SECRET_KEY: 'test_secret',
+      CASHFREE_ENVIRONMENT: 'SANDBOX'
     },
   },
 });

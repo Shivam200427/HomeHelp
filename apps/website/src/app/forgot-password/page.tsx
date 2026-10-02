@@ -1,10 +1,11 @@
+import { API_URL } from '@/lib/config';
 'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://homehelp-clbc.onrender.com';
+
 
 export default function ForgotPasswordPage() {
   const router = useRouter();

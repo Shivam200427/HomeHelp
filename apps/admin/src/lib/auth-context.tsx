@@ -1,3 +1,4 @@
+import { API_URL } from '@/lib/config';
 'use client';
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
@@ -33,7 +34,7 @@ function getInitialDark(): boolean {
 async function fetchMe(): Promise<AdminUser | null> {
   try {
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL || ''}/api/auth/me`,
+      `${API_URL}/api/auth/me`,
       { credentials: 'include' },
     );
     if (!res.ok) return null;
@@ -68,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/auth/logout`, {
+      await fetch(`${API_URL}/api/auth/logout`, {
         method: 'POST',
         credentials: 'include',
       });

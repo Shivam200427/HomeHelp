@@ -1,36 +1,26 @@
-import { Router } from 'express';
-import Razorpay from 'razorpay';
-import { createHmac } from 'crypto';
+import { Router, Request } from 'express';
+import { Cashfree, CFEnvironment } from 'cashfree-pg';
 import { prisma } from '../lib/prisma';
 import { authMiddleware, adminMiddleware } from '../middleware/auth';
 import { RATE_TABLE } from '../lib/constants';
 
 export const paymentsRouter = Router();
-paymentsRouter.use(authMiddleware);
 
-const razorpayKeyId = process.env.RAZORPAY_KEY_ID || '';
-const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET || '';
-const hasRazorpayKeys = !!(razorpayKeyId && razorpayKeySecret);
+const cashfreeEnv = process.env.CASHFREE_ENVIRONMENT === 'PRODUCTION' 
+  ? CFEnvironment.PRODUCTION 
+  : CFEnvironment.SANDBOX;
+
+const cashfreeAppId = process.env.CASHFREE_APP_ID || '';
+const cashfreeSecretKey = process.env.CASHFREE_SECRET_KEY || '';
+const hasCashfreeKeys = !!(cashfreeAppId && cashfreeSecretKey);
+
+let cashfree: Cashfree | null = null;
+if (hasCashfreeKeys) {
+  cashfree = new Cashfree(cashfreeEnv, cashfreeAppId, cashfreeSecretKey);
+}
 
 const upiVpa = process.env.UPI_VPA || '';
 const upiName = process.env.UPI_NAME || 'HomeHelp';
-
-let razorpay: Razorpay | null = null;
-if (hasRazorpayKeys) {
-  razorpay = new Razorpay({ key_id: razorpayKeyId, key_secret: razorpayKeySecret });
-}
-
-function verifySignature(orderId: string, paymentId: string, signature: string): boolean {
-  try {
-    const expected = createHmac('sha256', razorpayKeySecret)
-      .update(`${orderId}|${paymentId}`)
-      .digest('hex');
-    return expected === signature;
-  } catch (err) {
-    console.error('[payments] verifySignature error:', err);
-    return false;
-  }
-}
 
 function buildUpiLink(bookingId: string, amount: number): string | null {
   if (!upiVpa) return null;
@@ -45,12 +35,57 @@ function buildUpiLink(bookingId: string, amount: number): string | null {
   return `upi://pay?${params.toString()}`;
 }
 
-// Single source of truth for the worker payout math: amount minus the 15% platform fee.
-// Used both at create-order time and when recomputing stale rows in mark-paid/verify.
 function computeWorkerPayout(amount: number): number {
   const platformFee = parseFloat((amount * 0.15).toFixed(2));
   return parseFloat((amount - platformFee).toFixed(2));
 }
+
+// Webhook endpoint (unauthenticated, requires raw signature)
+paymentsRouter.post('/webhook', async (req: Request & { rawBody?: string }, res) => {
+  try {
+    const signature = req.headers['x-webhook-signature'] as string;
+    const timestamp = req.headers['x-webhook-timestamp'] as string;
+    const rawBody = req.rawBody || JSON.stringify(req.body);
+
+    if (!cashfree) {
+       return res.status(400).json({ error: 'Cashfree not configured' });
+    }
+
+    try {
+      cashfree.PGVerifyWebhookSignature(signature, rawBody, timestamp);
+    } catch (err) {
+      console.error('[Payments] Webhook signature invalid', err);
+      return res.status(401).json({ error: 'Invalid webhook signature' });
+    }
+
+    const payload = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    
+    if (payload.type === 'PAYMENT_SUCCESS_WEBHOOK') {
+      const orderId = payload.data?.order?.order_id;
+      if (!orderId) return res.status(400).json({ error: 'Missing order_id' });
+
+      const payment = await prisma.payment.findFirst({
+        where: { cashfreeOrderId: orderId }
+      });
+
+      if (payment && (payment.status === 'pending' || payment.status === 'captured')) {
+         const recomputed = computeWorkerPayout(Number(payment.amount));
+         await prisma.payment.update({
+           where: { id: payment.id },
+           data: { status: 'paid', workerPayout: recomputed }
+         });
+         console.log(`[Payments] Webhook processed. Payment ${payment.id} marked as PAID.`);
+      }
+    }
+    
+    return res.status(200).json({ status: 'OK' });
+  } catch (err) {
+    console.error('[Payments] Webhook processing error:', err);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+paymentsRouter.use(authMiddleware);
 
 paymentsRouter.post('/create-order', async (req, res) => {
   try {
@@ -59,7 +94,10 @@ paymentsRouter.post('/create-order', async (req, res) => {
       return res.status(400).json({ error: 'bookingId is required' });
     }
 
-    const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
+    const booking = await prisma.booking.findUnique({ 
+      where: { id: bookingId },
+      include: { user: true } 
+    });
     if (!booking) return res.status(404).json({ error: 'Booking not found' });
 
     if (booking.userId !== req.user!.userId) {
@@ -78,33 +116,45 @@ paymentsRouter.post('/create-order', async (req, res) => {
     const platformFee = parseFloat((amount * 0.15).toFixed(2));
     const workerPayout = computeWorkerPayout(amount);
 
-    // Idempotent: reuse an existing payment for this booking instead of duplicating.
     let payment = await prisma.payment.findUnique({ where: { bookingId } });
 
     if (payment && (payment.status === 'paid' || payment.status === 'captured')) {
       return res.status(409).json({ error: 'Payment already completed for this booking', payment });
     }
 
-    let razorpayOrderId: string | null = null;
+    let cashfreeOrderId: string | null = null;
+    let cashfreeSessionId: string | null = null;
     let method = 'upi';
 
     if (!payment) {
-      if (razorpay) {
+      if (cashfree) {
         try {
-          const order = await razorpay.orders.create({
-            amount: Math.round(amount * 100),
-            currency: 'INR',
-            receipt: `booking_${bookingId.slice(0, 8)}`,
+          const generatedOrderId = `booking_${bookingId.replace(/-/g, '').slice(0, 15)}_${Date.now()}`;
+          const response = await cashfree.PGCreateOrder({
+            order_id: generatedOrderId,
+            order_amount: amount,
+            order_currency: "INR",
+            customer_details: {
+              customer_id: req.user!.userId.replace(/-/g, '').slice(0, 20),
+              customer_phone: booking.user?.phoneNumber || "9999999999",
+              customer_email: booking.user?.email || "customer@homehelp.local",
+            },
+            order_meta: {
+              return_url: `${process.env.FRONTEND_URL || 'https://homehelp-website.vercel.app'}/my-bookings?order_id={order_id}`,
+              notify_url: `${process.env.NEXT_PUBLIC_API_URL || 'https://homehelp-clbc.onrender.com'}/api/payments/webhook`
+            }
           });
-          razorpayOrderId = order.id;
-          method = 'razorpay';
-        } catch (err) {
-          console.error('[Payments] Razorpay order creation failed:', err);
-          throw new Error('Razorpay order creation failed');
+          cashfreeOrderId = response.data.order_id || null;
+          cashfreeSessionId = response.data.payment_session_id || null;
+          method = 'cashfree';
+        } catch (err: any) {
+          console.error('[Payments] Cashfree order creation failed:', err.response?.data || err);
+          throw new Error('Cashfree order creation failed');
         }
       } else {
-        console.warn('[Payments] Razorpay not configured - using UPI manual collection');
-        razorpayOrderId = null;
+        console.warn('[Payments] Cashfree not configured - using UPI manual collection');
+        cashfreeOrderId = null;
+        cashfreeSessionId = null;
         method = 'upi';
       }
 
@@ -116,24 +166,33 @@ paymentsRouter.post('/create-order', async (req, res) => {
           workerPayout,
           status: 'pending',
           paymentMethod: method,
-          razorpayOrderId,
+          cashfreeOrderId,
+          cashfreeSessionId
         },
       });
     } else if (
-      payment.paymentMethod === 'razorpay' &&
-      razorpay &&
-      !payment.razorpayOrderId &&
+      payment.paymentMethod === 'cashfree' &&
+      cashfree &&
+      !payment.cashfreeOrderId &&
       payment.status === 'pending'
     ) {
-      // Backfill a missing Razorpay order id for an existing pending Razorpay payment.
-      const order = await razorpay.orders.create({
-        amount: Math.round(Number(payment.amount) * 100),
-        currency: 'INR',
-        receipt: `booking_${bookingId.slice(0, 8)}`,
+      const generatedOrderId = `booking_${bookingId.replace(/-/g, '').slice(0, 15)}_${Date.now()}`;
+      const response = await cashfree.PGCreateOrder({
+        order_id: generatedOrderId,
+        order_amount: Math.round(Number(payment.amount)),
+        order_currency: "INR",
+        customer_details: {
+          customer_id: req.user!.userId.replace(/-/g, '').slice(0, 20),
+          customer_phone: booking.user?.phoneNumber || "9999999999",
+          customer_email: booking.user?.email || "customer@homehelp.local",
+        }
       });
       payment = await prisma.payment.update({
         where: { id: payment.id },
-        data: { razorpayOrderId: order.id },
+        data: { 
+          cashfreeOrderId: response.data.order_id || null, 
+          cashfreeSessionId: response.data.payment_session_id || null 
+        },
       });
     }
 
@@ -141,7 +200,8 @@ paymentsRouter.post('/create-order', async (req, res) => {
 
     return res.json({
       payment,
-      razorpayOrderId: payment.razorpayOrderId,
+      cashfreeOrderId: payment.cashfreeOrderId,
+      paymentSessionId: payment.cashfreeSessionId,
       upi: upiLink
         ? {
             pa: upiVpa,
@@ -159,7 +219,6 @@ paymentsRouter.post('/create-order', async (req, res) => {
   }
 });
 
-// Admin confirms a manually-collected payment (e.g. UPI transfer verified in bank).
 paymentsRouter.post('/:id/mark-paid', adminMiddleware, async (req, res) => {
   try {
     const { id } = req.params;
@@ -170,8 +229,6 @@ paymentsRouter.post('/:id/mark-paid', adminMiddleware, async (req, res) => {
       return res.json({ payment });
     }
 
-    // Recompute workerPayout from server-side fee table so manual confirmations
-    // (UPI transfers) leave downstream payout processing with valid data.
     const recomputed = computeWorkerPayout(Number(payment.amount));
 
     const updated = await prisma.payment.update({
@@ -189,74 +246,63 @@ paymentsRouter.post('/:id/mark-paid', adminMiddleware, async (req, res) => {
 
 paymentsRouter.post('/verify', async (req, res) => {
   try {
-    const { paymentId, razorpayPaymentId, razorpaySignature } = req.body;
+    const { paymentId } = req.body;
 
     if (!paymentId) {
       return res.status(400).json({ error: 'paymentId is required' });
     }
 
-    // 1. Fetch payment from DB first
     const payment = await prisma.payment.findUnique({
       where: { id: paymentId },
       include: { booking: true }
     });
 
     if (!payment) {
-      console.error(`[Payments] Verification failed: Payment ${paymentId} not found`);
       return res.status(404).json({ error: 'Payment not found' });
     }
 
-    // 2. Access Control
     const user = await prisma.user.findUnique({ where: { id: req.user!.userId } });
     const isAdmin = user?.isAdmin ?? false;
 
     if (!isAdmin && (!payment.booking || payment.booking.userId !== req.user!.userId)) {
-      console.error(`[Payments] Access denied for user ${req.user!.userId} on payment ${paymentId}`);
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    // 3. Signature Verification
-    if (!razorpay) {
-      // In fee-free UPI mode, payments are confirmed manually via /:id/mark-paid.
-      // The /verify endpoint is only meaningful when Razorpay is configured; reject
-      // any attempt to verify without a gateway to prevent spoofed "captured" status.
-      console.warn(`[Payments] /verify called for ${paymentId} but Razorpay not configured; rejected`);
+    if (!cashfree || payment.paymentMethod !== 'cashfree') {
       return res.status(400).json({
-        error: 'Razorpay is not configured. Use the admin mark-paid endpoint to confirm UPI payments.',
+        error: 'Cashfree is not configured or this is not a Cashfree payment. Use the admin mark-paid endpoint to confirm manual payments.',
       });
     }
 
-    if (!razorpayPaymentId || !razorpaySignature) {
-      return res.status(400).json({ error: 'razorpayPaymentId and razorpaySignature are required' });
+    if (!payment.cashfreeOrderId) {
+      return res.status(400).json({ error: 'No Cashfree order ID found for this payment' });
     }
 
-    if (!payment.razorpayOrderId) {
-      console.error(`[Payments] Verification failed: No razorpayOrderId for payment ${paymentId}`);
-      return res.status(400).json({ error: 'No razorpay order ID found for this payment' });
+    const response = await cashfree.PGOrderFetchPayments(payment.cashfreeOrderId);
+    const paymentsList = response.data;
+    
+    const successfulPayment = paymentsList?.find((p: any) => p.payment_status === 'SUCCESS');
+
+    if (successfulPayment) {
+      if (payment.status === 'pending') {
+        const recomputed = computeWorkerPayout(Number(payment.amount));
+        const updatedPayment = await prisma.payment.update({
+          where: { id: paymentId },
+          data: {
+            status: 'paid',
+            workerPayout: recomputed,
+          },
+        });
+        return res.json({ payment: updatedPayment });
+      } else {
+        return res.json({ payment });
+      }
+    } else {
+      return res.status(400).json({ error: 'Payment has not been completed successfully yet' });
     }
-
-    const isValid = verifySignature(payment.razorpayOrderId, razorpayPaymentId, razorpaySignature);
-    if (!isValid) {
-      console.error(`[Payments] Invalid signature for payment ${paymentId}. OrderID: ${payment.razorpayOrderId}, PaymentID: ${razorpayPaymentId}`);
-      return res.status(400).json({ error: 'Invalid payment signature' });
-    }
-
-    // 4. Update payment (recompute workerPayout so payouts reflect the latest fee math)
-    const recomputed = computeWorkerPayout(Number(payment.amount));
-    const updatedPayment = await prisma.payment.update({
-      where: { id: paymentId },
-      data: {
-        status: 'captured',
-        razorpayPaymentId: razorpayPaymentId || undefined,
-        workerPayout: recomputed,
-      },
-    });
-
-    console.log(`[Payments] Payment ${paymentId} successfully verified and captured`);
-    return res.json({ payment: updatedPayment });
-  } catch (err) {
-    console.error('[payments] verify error:', err);
-    return res.status(500).json({ error: 'Failed to verify payment' });
+  } catch (err: any) {
+    console.error('[payments] verify error:', err.response?.data || err);
+    return res.status(500).json({ error: 'Failed to verify payment status' });
   }
 });
 
